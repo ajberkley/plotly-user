@@ -243,7 +243,7 @@
 (defun data-and-style-to-traces (data-and-style)
   (map 'list
        (lambda (x)
-	 (destructuring-bind (&key data color marker line name)
+	 (destructuring-bind (&key data color marker marker-size line name)
 	     x
 	   (let ((data
 		   (if (not (listp (elt data 0)))
@@ -268,7 +268,7 @@
 		     (make-instance 'plotly:line :color color :line-dash line :width 2.0)))
 	     (when marker
 	       (setf (plotly:trace-marker trace)
-		     (make-instance 'plotly:marker :color color :size 14 :symbol marker)))
+		     (make-instance 'plotly:marker :color color :size (or marker-size 8) :symbol marker)))
 	     (setf (plotly:trace-mode trace)
 		   (cond
 		     ((and marker line) "lines+markers")
@@ -290,7 +290,7 @@
   :title \"A plot\" :line \"solid\" :marker \"cross\" :color \"red\" :legend '(\"my trace name\"))"
   (declare (optimize (debug 3)))
   (maybe-start-workbench)
-  (destructuring-bind (&key color marker line (title "") (x-axis-label "") (y-axis-label "") legend)
+  (destructuring-bind (&key color marker marker-size line (title "") (x-axis-label "") (y-axis-label "") legend)
       (if (stringp (first rest))
 	  (print (append (parse-matlab-style (first rest)) (cdr rest)))
 	  rest)
@@ -299,11 +299,11 @@
 	   (hold (plotly:hold plot))
 	   (ensure-list-data
 	     (if (= (length (first data)) 2)
-		 (list (list :data data :color color :marker marker :line line :name (or (elt legend 0) "")))
+		 (list (list :data data :color color :marker marker :marker-size marker-size :line line :name (or (elt legend 0) "")))
 		 (if legend
-		     (mapcar (lambda (d l) (list :data d :color color :marker marker :line line :name l))
+		     (mapcar (lambda (d l) (list :data d :color color :marker marker :marker-size marker-size :line line :name l))
 			     data legend)
-		     (mapcar (lambda (d) (list :data d :color color :marker marker :line line))
+		     (mapcar (lambda (d) (list :data d :color color :marker marker :marker-size marker-size :line line))
 			     data)))))
       ;; TODO make hold all cycle colors/markers if not specified
       (if hold
@@ -393,7 +393,7 @@
      (serialize-to-json (plotly:traces plotly-plot))
      (serialize-to-json (plotly:layout plotly-plot)))))
 
-(defun scatter3d (x y z &key (color "blue") (size 4) (plot (get-active-plot)))
+(defun scatter3d (triplets &key (color "blue") (size 4) (plot (get-active-plot)))
   "no real features yet...
     (let (data)
       (loop for x from -0.7 below 0.7 by 0.05
@@ -401,16 +401,37 @@
 	       (loop for y from -0.7 below 0.7 by 0.05
 		     do
 			(push (list x y (* (cos (* 2 pi x x)) (cos (* 2 pi y y)))) data)))
-      (scatter3d (mapcar #'first data)
-		 (mapcar #'second data)
-		 (mapcar #'third data)))"
+      (scatter3d data))"
   (maybe-start-workbench)
   (let* ((marker (make-instance 'plotly:marker :symbol "circle" :size size :color color))
+	 (x (mapcar #'first triplets))
+	 (y (mapcar #'second triplets))
+	 (z (mapcar #'third triplets))
 	 (traces (list (make-instance 'plotly:3d-trace :x x :y y
 						       :z z
 						       :marker marker
-						       ;; :type "surface"
-						       )))
+						       :type "scatter3d")))
+	 (layout (make-instance 'plotly:plot-layout
+				:width (- (clog:width (plotly:parent plot)) 10)
+				:height (- (clog:height (plotly:parent plot)) 10))))
+    (plot-to-active-plot
+     (make-instance 'plotly-plot :traces traces :layout layout)
+     plot)))
+
+(defun surface (x y z &key (plot (get-active-plot)))
+  "Z should be a 2D, x and y 1d sequences.
+  (let* ((x (loop for x from -4 below 4 by 0.1 collect x))
+         (y (loop for y from -8 below 8 by 0.1 collect y)) 
+	 (z (make-array (list (length y) (length x)))))
+     (loop for x in x
+   	   for xidx from 0
+	   do (loop for y in y
+		    for yidx from 0
+		    do (setf (aref z yidx xidx) (* (cos (+ (* x x) (* y y)))))))
+    (surface x y z))"
+  (maybe-start-workbench)
+  (let* ((traces (list (make-instance 'plotly:3d-trace :x x :y y :z z
+						       :type "surface")))
 	 (layout (make-instance 'plotly:plot-layout
 				:width (- (clog:width (plotly:parent plot)) 10)
 				:height (- (clog:height (plotly:parent plot)) 10))))
@@ -427,3 +448,45 @@
     (setf (plotly:text (plotly:title (plotly:y-axis layout))) y-label)
     (setf (plotly:text (plotly:title layout)) title)
     (refresh plot)))
+
+(defun demo ()
+  (maybe-start-workbench)
+  (loop until (connected) do (sleep 0.5))
+  (figure 0)
+  (hoff)
+  (plot-data
+   (loop for x from -10 below 10
+         collect (list (make-uncertain-number (+ x (- (random 1.0) 0.5))
+					      :s+ (random 0.5d0) :s- (random 0.5d0))
+		       (make-uncertain-number (+ x (- (random 1d0) 0.5))
+					      :s+ (random 0.5d0) :s- (random 0.5d0))))
+   :x-axis-label "$\\text{Time }(\\mu\\text{s})$" :y-axis-label "$\\sqrt{signal}$"
+   :title "A plot" :line "solid" :marker "square" :color "red" :legend '("my first trace"))
+  (hon)
+  (plot-data
+   (loop for x from -10 below 10
+         collect (list (make-uncertain-number (+ x (- (random 1.0) 0.5))
+					      :s+ (random 0.5d0) :s- (random 0.5d0))
+		       (make-uncertain-number (- (+ x (- (random 1d0) 0.5)))
+					      :s+ (random 0.5d0) :s- (random 0.5d0))))
+   :x-axis-label "$\\text{Time }(\\mu\\text{s})$" :y-axis-label "$\\sqrt{signal}$"
+   :marker-size 4
+   :title "A plot" :line "solid" :marker "circle" :color "blue" :legend '("my second trace"))
+  (figure 1)
+  (let (data)
+    (loop for x from -0.7 below 0.7 by 0.05
+	  do
+	     (loop for y from -0.7 below 0.7 by 0.05
+		   do
+		      (push (list x y (* (cos (* 2 pi x x)) (cos (* 2 pi y y)))) data)))
+    (scatter3d data))
+  (figure 2)
+  (let* ((x (loop for x from -4 below 4 by 0.1 collect x))
+         (y (loop for y from -8 below 8 by 0.1 collect y)) 
+	 (z (make-array (list (length y) (length x)))))
+    (loop for x in x
+   	  for xidx from 0
+	  do (loop for y in y
+		   for yidx from 0
+		   do (setf (aref z yidx xidx) (* (cos (+ (* x x) (* y y)))))))
+    (surface x y z)))

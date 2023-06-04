@@ -20,25 +20,7 @@ git clone https://github.com/rabbibotton/clog.git
 CL-USER> (quicklisp:quickload "PLOTLY-USER")
 CL-USER> (in-package "PLOTLY-USER")
 PLOTLY-USER> (maybe-start-workbench)
-PLOTLY-USER>
- (plot-data
-  (loop for x from -10 below 10
-        collect (list (make-uncertain-number (+ x (- (random 1.0) 0.5))
-					    :s+ (random 0.5d0) :s- (random 0.5d0))
-		     (make-uncertain-number (+ x (- (random 1d0) 0.5))
-					    :s+ (random 0.5d0) :s- (random 0.5d0))))
-  :x-axis-label "$\\text{Time }(\\mu\\text{s})$" :y-axis-label "$\\sqrt{signal}$"
-  :title "A plot" :line "solid" :marker "cross" :color "red" :legend '("my trace name"))
-PLOTLY-USER> (figure 1)
-PLOTLY-USER> (let (data)
-	       (loop for x from -0.3 below 0.3 by 0.05
-		   do
-		      (loop for y from -0.3 below 0.3 by 0.05
-			    do
-			       (push (list x y (* (cos (* 2 pi x)) (cos (* 2 pi y)))) data)))
-	       (scatter3d (mapcar #'first data)
-			  (mapcar #'second data)
-			  (mapcar #'third data)))
+PLOTLY-USER> (demo)
 ```
 
 This should result in:
