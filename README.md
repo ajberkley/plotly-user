@@ -41,7 +41,8 @@ PLOTLY-USER> (let (data)
 			  (mapcar #'third data)))
 ```
 
-
+This should result in:
+![Screenshot](./screenshot-readme.png)
 
 ## Main dependencies
 [CLOG](https://github.com/rabbibotton/clog): This provides the browser based user interface and is a great framework for quick development of such things.

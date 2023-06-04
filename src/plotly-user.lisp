@@ -138,7 +138,7 @@
                                     (declare (ignore obj))()))))
 
 (defun on-new-window (body)
-  (setf (clog:title (clog:html-document body)) "TYPHON plotting workbench")
+  (setf (clog:title (clog:html-document body)) "Plotting workbench")
   (plot-gui-initialize body)
   (clog:add-class body "w3-cyan")
   (let* ((menu  (clog-gui:create-gui-menu-bar body))
@@ -160,7 +160,8 @@
   "Open up a browser window if it is not already connected."
   (unless (connected)
     (clog:initialize 'on-new-window)
-    (clog:open-browser)))
+    (clog:open-browser))
+  (values))
 
 (defun figure (&optional number)
   "Create a new figure, or make an extant figure active and bring it to the front"
