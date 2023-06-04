@@ -176,17 +176,19 @@
    ))
 
 (defclass 3d-trace ()
-  ((type :initform "scatter3d")
+  ((type :initform "scatter3d" :initarg :type)
    (name :initform "" :accessor trace-name :type string :initarg :name)
    (visible :initform t :accessor trace-visible :type (member t nil "legendonly"))
    (showlegend :initform t :accessor trace-showlegend :type boolean)
    (opacity :initform 1 :accessor trace-opacity :type (real 0.0 1.0))
-   (mode :type string :initform "markers" :accessor trace-mode)
+   (mode :type string :initform "markers" :accessor trace-mode :initarg :mode)
    (x :accessor trace-x :type sequence :initarg :x)
    (y :accessor trace-y :type sequence :initarg :y)
    (z :accessor trace-y :type sequence :initarg :z)
-   (xaxis :accessor trace-xaxis :type string :initform "x") ;; which axis this is drawn against
-   (yaxis :accessor trace-yaxis :type string :initform "y")
+   (xaxis :accessor trace-xaxis :type string ;; :initform "x"
+	  ) ;; which axis this is drawn against
+   (yaxis :accessor trace-yaxis :type string ;; :initform "y"
+	  )
    ;;(orientation :accessor trace-orientation :type string...
    ;; (groupnorm
    ;; alignmentgroup

@@ -396,17 +396,21 @@
 (defun scatter3d (x y z &key (color "blue") (size 4) (plot (get-active-plot)))
   "no real features yet...
     (let (data)
-      (loop for x from -0.3 below 0.3 by 0.05
+      (loop for x from -0.7 below 0.7 by 0.05
 	    do
-	       (loop for y from -0.3 below 0.3 by 0.05
+	       (loop for y from -0.7 below 0.7 by 0.05
 		     do
-			(push (list x y (* (cos (* 2 pi x)) (cos (* 2 pi y)))) data)))
+			(push (list x y (* (cos (* 2 pi x x)) (cos (* 2 pi y y)))) data)))
       (scatter3d (mapcar #'first data)
 		 (mapcar #'second data)
 		 (mapcar #'third data)))"
   (maybe-start-workbench)
   (let* ((marker (make-instance 'plotly:marker :symbol "circle" :size size :color color))
-	 (traces (list (make-instance 'plotly:3d-trace :x x :y y :z z :marker marker)))
+	 (traces (list (make-instance 'plotly:3d-trace :x x :y y
+						       :z z
+						       :marker marker
+						       ;; :type "surface"
+						       )))
 	 (layout (make-instance 'plotly:plot-layout
 				:width (- (clog:width (plotly:parent plot)) 10)
 				:height (- (clog:height (plotly:parent plot)) 10))))
