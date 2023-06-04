@@ -3,7 +3,7 @@
   (:import-from #:clog)
   (:import-from #:clog-gui)
   (:import-from #:shasht)
-  (:import-from #:alexandria)
+  (:import-from #:alexandria #:compose)
   (:documentation
    "An interactive data exploration workspace.  The underlying plotting is handled by
  plotly in a browser which we talk to via CLOG.
@@ -35,7 +35,19 @@
    (hold :accessor hold :initform nil :type (member nil :on :all))
    (last-touched :accessor last-touched :initform (get-universal-time) :type fixnum)
    (data :accessor data :initform nil)
-   (closing :accessor closing :initform nil)))
+   (closing :accessor closing :initform nil))
+  (:documentation "Represents a plotly plot."))
+
+(defclass plots ()
+  ((plots :accessor plots :initform nil :documentation "A list of `plotly::plot's")
+   (current-plot :accessor current-plot :initform nil))
+  (:documentation "A representation of all the active plots on the GUI.  There is an
+ current-plot, which is the last that was drawn to, or clicked in, like matlab"))
+
+;; Our interface is a singleton: this isn't a web application with multiple users.
+;; The user is interacting from the REPL.  *plots*
+(defvar *plots* nil "Contains an instance of 'plots, or null")
+(defvar *body* nil "The main html web page body, held here for basic connectivity checking")
 
 ;; Unique IDs for figures
 (defvar *id* (make-array 1 :element-type '(unsigned-byte 64) :initial-element 0))
@@ -46,16 +58,12 @@
 (defun return-id (id)
   (sb-ext:atomic-push id (car *free-ids*)))
 
-(defclass plots ()
-  ((plots :accessor plots :initform nil :documentation "A list of `plotly::plot's")
-   (current-plot :accessor current-plot :initform nil)))
-
-(defvar *plots* nil)
-(defvar *body* nil)
-
+;; Not sure if this is the right thing to do, but detects if the user closes the browser pane
+;; for example.
 (defun connected ()
   (and *body* (clog::validp *body*)))
 
+;; Why doesn't 3.x work?
 (defun plot-gui-initialize (body)
   (reset-ids)
   (clog-gui:clog-gui-initialize body)
@@ -69,11 +77,15 @@
     (setf (clog:connection-data-item body "plots") plots)))
 
 (defun get-active-plot ()
+  "Used internally; get the last clicked plot, or the zeroth plot, or create a new figure
+ with an empty plot"
   (or (and *plots* (current-plot *plots*))
       (and *plots* (plots *plots*) (elt (plots *plots*) 0))
       (funcall 'on-file-new-plot *body*)))
 
 (defun on-file-new-plot (obj &optional force-id)
+  "Handles the callback when someone clicks NEW PLOT, also used to generate a new figure
+ from the repl when calling (figure)."
   (let* ((app (clog:connection-data-item obj "plots"))
 	 (id (or force-id (new-id)))
 	 (name (format nil "Plot ~A" id))
@@ -103,6 +115,7 @@
       (figure id)
       plot)))
 
+;; Acknowledge the great work!
 (defun on-help-about (obj)
   (let* ((about
 	   (clog-gui:create-gui-window obj
@@ -141,30 +154,30 @@
                                              ;; return empty string to prevent nav off page
                                         "")))
 
-(defun force-refresh-plots ()
-  ;; If your browser got disconnected
-  (loop for plot in (plots *plots*)
-	do (figure (plot-id plot))
-	do (plot-data (data plot))))
-
 (defun maybe-start-workbench ()
+  "Open up a browser window if it is not already connected."
   (unless (connected)
     (clog:initialize 'on-new-window)
     (clog:open-browser)))
 
 (defun figure (&optional number)
+  "Create a new figure, or make an extant figure active and bring it to the front"
   (maybe-start-workbench)
   (let ((found (find number (plots *plots*) :key #'plot-id)))
     (if found
-	(progn (setf (current-plot *plots*) found)
+	(prog1 (setf (current-plot *plots*) found)
 	       (clog-gui:window-to-top-by-title *body* (format nil "Plot ~A" number)))
-	(progn (setf (current-plot *plots*) (funcall 'on-file-new-plot *body* number))))))
+	(setf (current-plot *plots*) (funcall 'on-file-new-plot *body* number)))))
 
-(defun close-figure (&optional number)
+(defun close-figure (number)
+  "Close a figure"
   (maybe-start-workbench)
   (let ((found (find number (plots *plots*) :key #'plot-id)))
     (when found
       (clog-gui:window-close (parent found)))))
+
+;; Uncertain numbers, for representing the x and y positions of data with
+;; potentially asymmetric error bars
 
 (defstruct (uncertain-number (:constructor %make-uncertain-number (x s+ s-)))
   x s+ s-)
@@ -179,10 +192,51 @@
 (defun maybe-uncertain-to-certain (x)
   (if (uncertain-number-p x) (uncertain-number-x x) x))
 
-(defun compose (a b)
-  (lambda (&rest rest)
-    (funcall a (apply b rest))))
+;; MATLAB like interfaces
+(defun hall ()
+  "Set the current plot to append new traces, and automatically
+ cycle colors/markers (not currently implemented, behaves like (hon))
+ matlab: hold all"
+  (setf (plotly:hold (get-active-plot)) :all))
 
+(defun hoff ()
+  "Set the current plot to be cleared if new traces are added.
+ matlab: hold off"
+  (setf (plotly:hold (get-active-plot)) nil))
+
+(defun hon (&optional (plot (get-active-plot)))
+  "Set the current plot to append new traces to the plot.  matlab: hold on"
+  (setf (plotly:hold plot) t))
+
+(defun call ()
+  "Close all figures.  matlab: close all"
+  (loop for plot in (plots *plots*)
+	do (clog-gui:window-close (parent plot)))
+  (reset-ids)
+  (setf (plots *plots*) nil)
+  (setf (current-plot *plots*) nil))
+
+(defun refresh (plot)
+  "Redraw.  Use if you have modified, for example, the layout of the plot."
+  (let ((plotly (plotly:clog-plotly plot)))
+    (relayout-plotly plotly (serialize-to-json (plotly:layout plot))))
+  plot)
+
+(defun xlim (min max &optional (plot (get-active-plot)))
+  "Change the visible x-range on a plot.  Acts on the last clicked
+ plot or the plot you specify (for example what is returned from
+ creating/activating a figure with: (figure 1)).  matlab: xlim([min max])"
+  (setf (plotly:range (plotly:x-axis (plotly:layout plot))) (list min max))
+  (refresh plot))
+
+(defun ylim (min max &optional (plot (get-active-plot)))
+  "Change the visible y-range on a plot.  Acts on the last clicked
+ plot or the plot you specify (for example what is returned from
+ creating/activating a figure with: (figure 1).  matlab: ylim([min max])"
+  (setf (plotly:range (plotly:y-axis (plotly:layout plot))) (list min max))
+  (refresh plot))
+
+;; Tools for plotting
 (defun data-and-style-to-traces (data-and-style)
   (map 'list
        (lambda (x)
@@ -220,42 +274,17 @@
 	     trace)))
        data-and-style))
 
-(defun hall ()
-  (setf (plotly:hold (get-active-plot)) :all))
-
-(defun hoff ()
-  (setf (plotly:hold (get-active-plot)) nil))
-
-(defun hon ()
-  (setf (plotly:hold (get-active-plot)) t))
-
-(defun call ()
-  (loop for plot in (plots *plots*)
-	do (clog-gui:window-close (parent plot)))
-  (reset-ids)
-  (setf (plots *plots*) nil)
-  (setf (current-plot *plots*) nil))
-
-(defun clf (&optional (plot (get-active-plot)))
-  (setf (plotly:traces plot) nil)
-  (setf (plotly:data plot) nil)
-  (setf (plotly:layout plot) (make-instance 'plotly:plot-layout ))
-  (clog-plotly:purge-plotly (clog-plotly plot)))
-
-(defun refresh (plot)
-  (let ((plotly (plotly:clog-plotly plot)))
-    (relayout-plotly plotly (serialize-to-json (plotly:layout plot)))))
-
-(defun xrange (min max &optional (plot (get-active-plot)))
-  (setf (plotly:range (plotly:x-axis (plotly:layout plot))) (list min max))
-  (refresh plot))
-
-(defun yrange (min max &optional (plot (get-active-plot)))
-  (setf (plotly:range (plotly:y-axis (plotly:layout plot))) (list min max))
-  (refresh plot))
-    
 (defun plot-data (data &rest rest)
-  "matlab style... optional color, marker line type, also :title :x-axis-label :y-axis-label"
+  "Plot a single 2D trace or multiple 2D traces.  Not a particularly good interface, but
+ fine for playing with now.  Example:
+ (plot-data
+  (loop for x from -10 below 10
+        collect (list (make-uncertain-number (+ x (- (random 1.0) 0.5))
+					    :s+ (random 0.5d0) :s- (random 0.5d0))
+		     (make-uncertain-number (+ x (- (random 1d0) 0.5))
+					    :s+ (random 0.5d0) :s- (random 0.5d0))))
+  :x-axis-label \"$\\text{Time }(\\mu\\text{s})$\" :y-axis-label \"$\\sqrt{signal}$\"
+  :title \"A plot\" :line \"--\" :marker \"o\" :color \"red\" :legend '(\"my trace name\"))"
   (declare (optimize (debug 3)))
   (maybe-start-workbench)
   (destructuring-bind (&key color marker line (title "") (x-axis-label "") (y-axis-label "") legend)
@@ -289,7 +318,6 @@
       (plot-to-active-plot plot)))
   (values))
     
-
 ;; Converting from matlab single string styles to plotly styles
 (defun search-and-delete (search-string string)
   (let ((position (search search-string string)))
