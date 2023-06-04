@@ -19,8 +19,8 @@ git clone https://github.com/rabbibotton/clog.git
 ```
 CL-USER> (quicklisp:quickload "PLOTLY-USER")
 CL-USER> (in-package "PLOTLY-USER")
-CL-USER> (maybe-start-workbench)
-CL-USER> (plot-data '((0 0) (10 3)) :x-axis-label "$\\mu s" :y-axis-label "Altitude" :title "Boom")
+PLOTLY-USER> (maybe-start-workbench)
+PLOTLY-USER> (plot-data '((0 0) (10 3)) :x-axis-label "$\\mu s" :y-axis-label "Altitude" :title "Boom")
 ```
 
 
