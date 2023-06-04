@@ -284,7 +284,7 @@
 		     (make-uncertain-number (+ x (- (random 1d0) 0.5))
 					    :s+ (random 0.5d0) :s- (random 0.5d0))))
   :x-axis-label \"$\\text{Time }(\\mu\\text{s})$\" :y-axis-label \"$\\sqrt{signal}$\"
-  :title \"A plot\" :line \"--\" :marker \"o\" :color \"red\" :legend '(\"my trace name\"))"
+  :title \"A plot\" :line \"solid\" :marker \"cross\" :color \"red\" :legend '(\"my trace name\"))"
   (declare (optimize (debug 3)))
   (maybe-start-workbench)
   (destructuring-bind (&key color marker line (title "") (x-axis-label "") (y-axis-label "") legend)
