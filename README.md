@@ -8,6 +8,23 @@ but the intent is the user spends most of their time at the Common
 Lisp REPL working with data and generating plots in the browser as
 they investigate data.
 
+## Installing
+```
+cd ~/quicklisp/local-projects
+git clone https://github.com/ajberkley/plotly-user.git
+git clone https://github.com/rabbibotton/clog-plotly.git
+git clone https://github.com/rabbibotton/clog.git
+```
+
+```
+CL-USER> (quicklisp:quickload "PLOTLY-USER")
+CL-USER> (in-package "PLOTLY-USER")
+CL-USER> (maybe-start-workbench)
+CL-USER> (plot-data '((0 0) (10 3)) :x-axis-label "$\\mu s" :y-axis-label "Altitude" :title "Boom")
+```
+
+
+
 ## Main dependencies
 [CLOG](https://github.com/rabbibotton/clog): This provides the browser based user interface and is a great framework for quick development of such things.
 
