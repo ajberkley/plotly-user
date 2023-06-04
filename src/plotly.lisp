@@ -84,7 +84,8 @@
    #:layout
    #:range
    #:x-axis
-   #:y-axis))
+   #:y-axis
+   #:3d-trace))
 
 (in-package #:plotly)
 
@@ -174,13 +175,13 @@
    ;; stackgaps xcalendar ycalendar uirevision
    ))
 
-(defclass scatter3d ()
-  ((type :initform "scatter")
+(defclass 3d-trace ()
+  ((type :initform "scatter3d")
    (name :initform "" :accessor trace-name :type string :initarg :name)
    (visible :initform t :accessor trace-visible :type (member t nil "legendonly"))
    (showlegend :initform t :accessor trace-showlegend :type boolean)
    (opacity :initform 1 :accessor trace-opacity :type (real 0.0 1.0))
-   (mode :type string :initform "none" :accessor trace-mode) ;; lines, markers, test joined with + or none
+   (mode :type string :initform "markers" :accessor trace-mode)
    (x :accessor trace-x :type sequence :initarg :x)
    (y :accessor trace-y :type sequence :initarg :y)
    (z :accessor trace-y :type sequence :initarg :z)
@@ -193,7 +194,7 @@
    ;; stackgroup
    ;; xperiod, xperiodalignmnet, xperiod0
    ;; yperiod, yperiodalignment, yperiod0
-   (marker :accessor trace-marker :type marker)
+   (marker :accessor trace-marker :type marker :initarg :marker)
    (line :accessor trace-line :type line)
    (textfont :accessor trace-textfont :type (or null plotly-font)) ;; for any text
    (error_x :accessor trace-error-x :type (or null error-bar))
@@ -205,10 +206,6 @@
    ;; hoveron
    ;; stackgaps xcalendar ycalendar uirevision
    ))  
-
-(defgeneric trace-type (trace)
-  (:method ((trace scatter-trace))
-    "scatter"))
 
 (defclass error-bar ()
   ((array :accessor error-bar-array :initarg :array)

@@ -91,7 +91,9 @@
 	 (name (format nil "Plot ~A" id))
 	 (win (clog-gui:create-gui-window obj :title name
 				     :has-pinner t :keep-on-top t
-                                     :top 200 :left 0 :width 500 :height 500))
+					      :top (+ 100 (* 500 (floor id 2)))
+					      :left (+ 0 (* 500 (mod id 2)))
+					      :width 500 :height 500))
 	 (div (clog:create-div (clog-gui:window-content win)))
 	 (plotly (clog-plotly:create-clog-plotly-element div)))
     (clog-plotly:attach-clog-plotly plotly)
@@ -390,38 +392,33 @@
      (serialize-to-json (plotly:traces plotly-plot))
      (serialize-to-json (plotly:layout plotly-plot)))))
 
-;; (defun scatter3d (x y z)
-;;   (maybe-start-workbench)
-;;   (let ((plotly (plotly:clog-plotly plot))
-;; 	(hold (plotly:hold plot)))
-;;     (clog-plotly:new-plot-plotly
-;;      plotly
-;;      (serialize-to-json
-      
-;;     ))
+(defun scatter3d (x y z &key (color "blue") (size 4) (plot (get-active-plot)))
+  "no real features yet...
+    (let (data)
+      (loop for x from -0.3 below 0.3 by 0.05
+	    do
+	       (loop for y from -0.3 below 0.3 by 0.05
+		     do
+			(push (list x y (* (cos (* 2 pi x)) (cos (* 2 pi y)))) data)))
+      (scatter3d (mapcar #'first data)
+		 (mapcar #'second data)
+		 (mapcar #'third data)))"
+  (maybe-start-workbench)
+  (let* ((marker (make-instance 'plotly:marker :symbol "circle" :size size :color color))
+	 (traces (list (make-instance 'plotly:3d-trace :x x :y y :z z :marker marker)))
+	 (layout (make-instance 'plotly:plot-layout
+				:width (- (clog:width (plotly:parent plot)) 10)
+				:height (- (clog:height (plotly:parent plot)) 10))))
+    (plot-to-active-plot
+     (make-instance 'plotly-plot :traces traces :layout layout)
+     plot)))
     
-;; (defun draw-hat (plotly fx fy)
-;;   (let (x-data y-data z-data)
-;;     (loop for x from -5f0 to 5f0 by 0.5f0
-;; 	  do
-;; 	     (loop for y from -5f0 to 5f0 by 0.5f0
-;; 		   do
-;; 		      (push x x-data)
-;; 		      (push y y-data)
-;; 		      (push (* (cos (* fx x)) (cos (* fy y))) z-data)))
-;;     (clog-plotly:purge-plotly plotly)
-;;     (clog-plotly:new-plot-plotly
-;;      plotly
-;;      (format nil "[{x: [~{~,3f~^,~}], y: [~{~,3f~^,~}], z: [~{~,3f~^,~}],~
-;;  mode: 'markers', marker: { size:12, line: {color: 'rgba(217, 217, 217, 0.14)',~
-;;  width: 0.5}, opacity: 0.8}, type: 'scatter3d'}]"
-;; 	     x-data y-data z-data)
-;;      "{ margin: { l: 0, r:0, b: 0, t:0} , title: 'hi', autosize: true}" "{ responsive: true }"
-;;      )))
-
-
-;; (defun label-and-title-plot (&optional x-label y-label title-list legend-list legend-location)
-;;   (declare (ignore legend-location))
-;;   (let ((plot (get-active-plot)))
-;;     (data plot)
-;;     (plot-data (data plot) :x-label x-label))
+(defun label-and-title-plot (&optional x-label y-label title)
+  "Add x-label, y-label, and title.  title works on 3d plots, but x-label and
+ y-label doesn't... I just haven't read the plotly docs on 3d scatter plots yet."
+  (let* ((plot (get-active-plot))
+	 (layout (plotly:layout plot)))
+    (setf (plotly:text (plotly:title (plotly:x-axis layout))) x-label)
+    (setf (plotly:text (plotly:title (plotly:y-axis layout))) y-label)
+    (setf (plotly:text (plotly:title layout)) title)
+    (refresh plot)))
