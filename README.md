@@ -8,6 +8,15 @@ but the intent is the user spends most of their time at the Common
 Lisp REPL working with data and generating plots in the browser as
 they investigate data.
 
+I do want a significant amount of interactivity from the browser based interface
+though--- it isn't just going to provide static plots.  That's because I am aiming
+to replace my current workflow which uses Matlab.  The interactivity
+out of the box of plotly isn't even close to what Matlab provides, but I think
+a minimally acceptable feature set is achievable without too much work.  Using
+CLOG to push most of the interactivity code to the Common Lisp server side is nice
+because I prefer coding in Common Lisp over Javascript, but it's unlikely I'll
+completely avoid having to shim things into the Javascript side.
+
 ## Installing
 ```
 cd ~/quicklisp/local-projects
