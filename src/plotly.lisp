@@ -85,7 +85,11 @@
    #:range
    #:x-axis
    #:y-axis
-   #:3d-trace))
+   #:3d-trace
+   #:plotly-config
+   #:annotation
+   #:add-annotation
+   #:toggle-annotation))
 
 (in-package #:plotly)
 
@@ -109,7 +113,45 @@
    (height :accessor height :initarg :height)
    (title :accessor title :initform (make-instance 'title) :type title :initarg :title)
    (xaxis :accessor x-axis :initform (make-instance 'axis) :type axis :initarg :x-axis)
-   (yaxis :accessor y-axis :initform (make-instance 'axis) :type axis :initarg :y-axis)))
+   (yaxis :accessor y-axis :initform (make-instance 'axis) :type axis :initarg :y-axis)
+   (annotations :initarg :annotations :accessor annotations :initform (make-array 0 :adjustable t :fill-pointer 0))))
+
+(defun ensure-annotations (plot-layout)
+  (check-type plot-layout plot-layout)
+  (unless (slot-boundp plot-layout 'annotations)
+    (setf (annotations plot-layout) (make-array 0 :adjustable t :fill-pointer 0))))
+  
+(defun add-annotation (plot-layout annotation)
+  (ensure-annotations plot-layout)
+  (check-type annotation annotation)
+  (vector-push-extend annotation (annotations plot-layout)))
+
+(defun annotation-equal (a b)
+  (check-type a annotation)
+  (check-type b annotation)
+  (and (= (slot-value a 'x) (slot-value b 'x))
+       (= (slot-value a 'y) (slot-value b 'y))))
+
+(defun toggle-annotation (plot-layout annotation)
+  (ensure-annotations plot-layout)
+  (let ((previous (find annotation (annotations plot-layout) :test 'annotation-equal)))
+    (if previous
+	(let ((new (remove previous (annotations plot-layout))))
+	  (setf (annotations plot-layout) (make-array (length new) :adjustable t :fill-pointer t )))
+      (add-annotation plot-layout annotation))))
+
+(defclass annotation ()
+  ((xref :initarg :xref :initform "x") ;; or "paper"
+   (yref :initarg :yref :initform "y")
+   (x :initarg :x)
+   (y :initarg :y)
+   (xanchor :initarg :xanchor ) ;; or "left" "center" "right"
+   (yanchor :initarg :yanchor) ;; "top" "center" ?
+   (text :initarg :text :initform "annotation")
+   (showarrow :initarg :showarrow :initform nil)
+   (arrowhead :initarg :arrowhead)
+   (ax :initarg :ax)
+   (ay :initarg :ay)))
 
 ;; Because we use :common-lisp, t is defined as a constant, so we
 ;; cannot use it as a symbol name which breaks our auto-json
@@ -122,7 +164,7 @@
 
 (in-package #:plotly)
 (defclass margin ()
-  ((hidden-t:t :initform 20 :initarg :t)
+  ((hidden-t:t :initarg :t)
    (b :initarg :b) (l :initarg :l) (r :initarg :r)))
 
 ;; See https://plotly.com/javascript/reference/scatter/
@@ -291,7 +333,8 @@
 (defclass title ()
   ((font :type plotly-font :accessor title-font :initform (make-instance 'plotly-font :size 14)
 	 :initarg :font)
-   (text :type string :accessor text :initarg :text)))
+   (text :type string :accessor text :initarg :text)
+   (automargin :type boolean :initform t :initarg :automargin)))
 
 (defclass plot-title (title)
   ((xref :initform "paper")
@@ -419,3 +462,7 @@
    ticks
    tickvals
    tickwidth))
+
+
+(defclass plotly-config ()
+  ((editable :initarg :editable)))

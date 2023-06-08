@@ -8,6 +8,7 @@
   :depends-on (#:clog #:clog-plotly #:alexandria #:shasht)
   :components ((:module "src"
 		:components ((:file "plotly")
-			     (:file "plotly-user")))
+			     (:file "plotly-user")
+			     (:file "clog-plotly-extensions")))
 	       (:module "www")))
 			

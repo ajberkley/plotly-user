@@ -63,10 +63,11 @@
 (defun connected ()
   (and *body* (clog::validp *body*)))
 
-;; Why doesn't 3.x work?
 (defun plot-gui-initialize (body)
+  ;; (clog:debug-mode body) -- makes the console in the browser more useful
   (reset-ids)
   (clog-gui:clog-gui-initialize body)
+  ;; Why doesn't MathJax 3.x work?
   (clog:load-script
    (clog:html-document (clog:connection-data-item body "clog-body"))
    "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML")
@@ -323,7 +324,28 @@
 	    (or x-axis-label (plotly:text (plotly:title (plotly:x-axis (plotly:layout plot))))))
       (setf (plotly:text (plotly:title (plotly:y-axis (plotly:layout plot))))
 	    (or y-axis-label (plotly:text (plotly:title (plotly:y-axis (plotly:layout plot))))))
-      (plot-to-active-plot plot)))
+      ;; Annotations don't work well yet.  Trying to let plotly handle editing of them
+      ;; makes a mess since we want to be in control of the plot.  We cannot poke at them
+      ;; or their arrows, etc.
+      (let ((last-called (get-universal-time)))
+	(clog-plotly::set-on-plotly-click (clog-plotly plot)
+					  (lambda (data &aux (now (get-universal-time)))
+					    (unless (= now last-called)
+					      (setf last-called now)
+					      (let ((ht (shasht:read-json data)))
+						(toggle-annotation
+						 (layout plot)
+						 (make-instance 'plotly:annotation
+								:x (gethash "x" ht)
+								:y (gethash "y" ht)
+								:text
+								(format nil "~,3f, ~,3f"
+									(gethash "x" ht)
+									(gethash "y" ht))
+								:showarrow t))
+						(refresh plot))))))
+      (plot-to-active-plot plot ;; :config (make-instance 'plotly:plotly-config :editable t )
+			   )))
   (values))
     
 ;; Converting from matlab single string styles to plotly styles
@@ -390,13 +412,15 @@
     (#\k "black")
     (#\w "white")))
 
-(defun plot-to-active-plot (plotly-plot &optional (active-plot (get-active-plot)))
+(defun plot-to-active-plot (plotly-plot &key config (active-plot (get-active-plot)))
+  "config should be a plotly:plotly-config"
   (maybe-start-workbench)
   (let ((plotly (plotly:clog-plotly active-plot)))
     (clog-plotly:new-plot-plotly
      plotly
      (serialize-to-json (plotly:traces plotly-plot))
-     (serialize-to-json (plotly:layout plotly-plot)))))
+     (serialize-to-json (plotly:layout plotly-plot))
+     (if config (serialize-to-json config) ""))))
 
 (defun scatter3d (triplets &key (color "blue") (size 4) (plot (get-active-plot)))
   "no real features yet...
@@ -421,7 +445,7 @@
 				:height (- (clog:height (plotly:parent plot)) 10))))
     (plot-to-active-plot
      (make-instance 'plotly-plot :traces traces :layout layout)
-     plot)))
+     :active-plot plot)))
 
 (defun surface (x y z &key (plot (get-active-plot)))
   "Z should be a 2D, x and y 1d sequences.
@@ -442,7 +466,7 @@
 				:height (- (clog:height (plotly:parent plot)) 10))))
     (plot-to-active-plot
      (make-instance 'plotly-plot :traces traces :layout layout)
-     plot)))
+     :active-plot plot)))
     
 (defun label-and-title-plot (&optional x-label y-label title)
   "Add x-label, y-label, and title.  title works on 3d plots, but x-label and
