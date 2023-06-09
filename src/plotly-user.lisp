@@ -296,7 +296,7 @@
   :title \"A plot\" :line \"solid\" :marker \"cross\" :color \"red\" :legend '(\"my trace name\"))"
   (declare (optimize (debug 3)))
   (maybe-start-workbench)
-  (destructuring-bind (&key color marker marker-size line (title "") (x-axis-label "") (y-axis-label "") legend)
+  (destructuring-bind (&key color marker marker-size line title x-axis-label y-axis-label legend)
       (if (stringp (first rest))
 	  (print (append (parse-matlab-style (first rest)) (cdr rest)))
 	  rest)
