@@ -92,7 +92,7 @@
 	 (name (format nil "Plot ~A" id))
 	 (win (clog-gui:create-gui-window obj :title name
 				     :has-pinner t :keep-on-top t
-					      :top (+ 100 (* 500 (floor id 2)))
+					      :top (+ 50 (* 500 (floor id 2)))
 					      :left (+ 0 (* 500 (mod id 2)))
 					      :width 500 :height 500))
 	 (div (clog:create-div (clog-gui:window-content win)))
