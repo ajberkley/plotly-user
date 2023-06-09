@@ -416,7 +416,7 @@
   "config should be a plotly:plotly-config"
   (maybe-start-workbench)
   (let ((plotly (plotly:clog-plotly active-plot)))
-    (clog-plotly:new-plot-plotly
+    (clog-plotly::new-plot-plotly*
      plotly
      (serialize-to-json (plotly:traces plotly-plot))
      (serialize-to-json (plotly:layout plotly-plot))
