@@ -333,7 +333,7 @@
 (defclass title ()
   ((font :type plotly-font :accessor title-font :initform (make-instance 'plotly-font :size 14)
 	 :initarg :font)
-   (text :type string :accessor text :initarg :text)
+   (text :type string :accessor text :initarg :text :initform "")
    (automargin :type boolean :initform t :initarg :automargin)))
 
 (defclass plot-title (title)
