@@ -5,7 +5,7 @@
   :version "0.0.1"
   :serial t
   :entry-point "plotly-user:maybe-start-workbench"
-  :depends-on (#:clog #:clog-plotly #:alexandria #:shasht)
+  :depends-on (#:clog #:clog-plotly #:alexandria #:shasht #:bordeaux-threads)
   :components ((:module "src"
 		:components ((:file "plotly")
 			     (:file "plotly-user")
