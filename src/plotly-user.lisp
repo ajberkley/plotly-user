@@ -68,6 +68,9 @@
 (defun connected (browser-window)
   (and (body browser-window) (clog::validp (body browser-window))))
 
+(defun browser-window-active (browser-window)
+  (not (string= (clog:query (clog:html-document (body browser-window)) "hidden") "true")))
+
 (defun reset-state ()
   (setf *browser-windows* nil
 	*current-browser-window* nil)
@@ -194,11 +197,11 @@
  browser window, also used to generate a new figure from the repl when
  calling (figure)."
   (declare (optimize (debug 3)))
-  (let* ((container (loop for container = (clog:connection-data-item obj "container")
-			  until container
-			  finally (return container)
-			  do (sleep 1))) ;; sometimes container is not fully up yet
-	 (app (plots container))
+  (let* ((browser-window (loop for browser-window = (clog:connection-data-item obj "container")
+			       until browser-window
+			       finally (return browser-window)
+			       do (sleep 0.1))) ;; sometimes container is not fully up yet
+	 (app (plots browser-window))
 	 (name (format nil "Plot ~A" id))
 	 (win (clog-gui:create-gui-window obj :title name
 				     :has-pinner t :keep-on-top t
@@ -212,11 +215,12 @@
 	   (mark-current-bring-to-front
 	     (lambda (&rest rest) (declare (ignore rest))
 	       (unless (closing plot)
-		 (setf (current-plot (plots container)) plot)
-		 (clog-gui:window-to-top-by-title (body container) name)))))
+		 (set-active-browser-window browser-window)
+		 (setf (current-plot (plots browser-window)) plot)
+		 (clog-gui:window-to-top-by-title (body browser-window) name)))))
       (clog:set-on-click win mark-current-bring-to-front)
       (clog:set-on-click plotly mark-current-bring-to-front)
-      (register-plot (plots container) plot id)
+      (register-plot (plots browser-window) plot id)
       (clog-gui:set-on-window-size-done win (lambda (&rest rest)
 				     (declare (ignore rest))
 				     (setf (plotly:width (plotly:layout plot)) (- (clog:width win) 10))
@@ -310,6 +314,15 @@
       (find-figure number)
     (when figure (close-plot browser-window figure))))
 
+(defun plot-to-active-plot (plotly-plot &key config (active-plot (get-active-plot)))
+  "config should be a plotly:plotly-config"
+  (maybe-start-workbench)
+  (let ((plotly (plotly:clog-plotly active-plot)))
+    (clog-plotly::new-plot-plotly*
+     plotly
+     (serialize-to-json (plotly:traces plotly-plot))
+     (serialize-to-json (plotly:layout plotly-plot))
+     (if config (serialize-to-json config) ""))))
 
 ;; Uncertain numbers, for representing the x and y positions of data with
 ;; potentially asymmetric error bars
@@ -529,16 +542,6 @@
     (#\y "yellow")
     (#\k "black")
     (#\w "white")))
-
-(defun plot-to-active-plot (plotly-plot &key config (active-plot (get-active-plot)))
-  "config should be a plotly:plotly-config"
-  (maybe-start-workbench)
-  (let ((plotly (plotly:clog-plotly active-plot)))
-    (clog-plotly::new-plot-plotly*
-     plotly
-     (serialize-to-json (plotly:traces plotly-plot))
-     (serialize-to-json (plotly:layout plotly-plot))
-     (if config (serialize-to-json config) ""))))
 
 (defun scatter3d (triplets &key (color "blue") (size 4) (plot (get-active-plot)))
   "no real features yet...
