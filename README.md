@@ -23,6 +23,8 @@ cd ~/quicklisp/local-projects
 git clone https://github.com/ajberkley/plotly-user.git
 git clone https://github.com/rabbibotton/clog-plotly.git
 git clone https://github.com/rabbibotton/clog.git
+git clone https://github.com/fukamachi/lack.git
+git clone https://github.com/fukamachi/clack.git
 ```
 
 ```
